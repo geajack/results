@@ -36,6 +36,29 @@ class ResultsDirectory(type(Path())):
         pass
 
 
+def recursive_write_protect(root):
+    file_read_only = 0o444
+    directory_read_only = 0o555
+    all_files = []
+    all_dirs = []
+    for root, dirs, files in os.walk(root):
+        for name in files:
+            path = os.path.join(root, name)
+            all_files.append(path)
+
+        for name in dirs:
+            path = os.path.join(root, name)
+            all_dirs.append(path)
+
+    for path in all_files:
+        os.chmod(path, file_read_only)
+
+    for path in all_dirs:
+        os.chmod(path, directory_read_only)
+
+    os.chmod(root, directory_read_only)
+
+
 def create_results_directory(tag=None):
     try:
         code_root = Path(os.environ["CODEROOT"]).resolve()
@@ -90,26 +113,7 @@ def create_results_directory(tag=None):
         for result in loaded_results:
             shutil.copytree(result / "details", results_directory / result.name)
 
-    file_read_only = 0o444
-    directory_read_only = 0o555
-    all_files = []
-    all_dirs = []
-    for root, dirs, files in os.walk(details_directory):
-        for name in files:
-            path = os.path.join(root, name)
-            all_files.append(path)
-
-        for name in dirs:
-            path = os.path.join(root, name)
-            all_dirs.append(path)
-
-    for path in all_files:
-        os.chmod(path, file_read_only)
-
-    for path in all_dirs:
-        os.chmod(path, directory_read_only)
-
-    os.chmod(details_directory, directory_read_only)
+    recursive_write_protect(details_directory)
     
     directory = ResultsDirectory(output_directory)
     output_directories.append(directory)
@@ -120,34 +124,18 @@ def load_results_directory(path):
     directory = ResultsDirectory(results_root / path)
     loaded_results.append(directory)
 
+    read_only = 0o555
+    full_access = 0o777
     for output_directory in output_directories:
         details_directory = output_directory / "details"
-        os.chmod(details_directory, 0o777)
+        os.chmod(details_directory, full_access)
 
         results_directory = details_directory / "results"
         results_directory.mkdir(exist_ok=True, parents=True)
         for result in loaded_results:
             shutil.copytree(result / "details", results_directory / result.name)
 
-        file_read_only = 0o444
-        directory_read_only = 0o555
-        all_files = []
-        all_dirs = []
-        for root, dirs, files in os.walk(details_directory):
-            for name in files:
-                path = os.path.join(root, name)
-                all_files.append(path)
-
-            for name in dirs:
-                path = os.path.join(root, name)
-                all_dirs.append(path)
-
-        for path in all_files:
-            os.chmod(path, file_read_only)
-
-        for path in all_dirs:
-            os.chmod(path, directory_read_only)
-
-        os.chmod(details_directory, directory_read_only)
+        recursive_write_protect(results_directory)
+        os.chmod(details_directory, read_only)
 
     return directory
