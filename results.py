@@ -56,6 +56,20 @@ class ResultsDirectory(type(Path())):
         else:
             with open(self / path, "r") as file:
                 return file.read()
+            
+
+def find_source_code(code_root):
+    modules = set()
+    for name in sys.modules:
+        module = sys.modules[name]
+        try:
+            module_file = Path(module.__file__)
+            is_descendant = code_root in module_file.resolve().parents
+            if is_descendant:
+                modules.add(module_file.resolve())
+        except (AttributeError, TypeError):
+            pass
+    return modules
 
 
 def recursive_write_protect(root):
@@ -98,22 +112,12 @@ def create_results_directory(tag=None):
 
     output_directory.mkdir(parents=True, exist_ok=True)
     
-    all_modules = set()
-    for name in sys.modules:
-        module = sys.modules[name]
-        try:
-            module_file = Path(module.__file__)
-            is_descendant = code_root in module_file.resolve().parents
-            if is_descendant:
-                all_modules.add(module_file.resolve())
-        except (AttributeError, TypeError):
-            pass
-
     details_directory = Path(output_directory) / "details"
     details_directory.mkdir(exist_ok=True, parents=True)
 
     code_directory = details_directory / "code"
-    for module_path in all_modules:
+    modules = find_source_code(code_root)
+    for module_path in modules:
         target_path = code_directory / module_path.relative_to(code_root)
         target_path.parent.mkdir(exist_ok=True, parents=True)
         with open(target_path, "w") as file, open(module_path, "r") as source_file:
