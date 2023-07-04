@@ -27,13 +27,35 @@ class ResultsDirectory(type(Path())):
                 return json.load(file)
 
     def pickle(self, path, data=None):
-        pass
+        if data is not None:
+            with open(self / path, "wb") as file:
+                pickle.dump(data, file)
+        else:
+            with open(self / path, "rb") as file:
+                return pickle.load(file)
+
+    def numpy(self, path, data=None):
+        import numpy
+        if data is not None:
+            numpy.save(self / path, data)
+        else:
+            return numpy.load(self / path)
 
     def binary(self, path, data=None):
-        pass
+        if data is not None:
+            with open(self / path, "wb") as file:
+                file.write(data)
+        else:
+            with open(self / path, "rb") as file:
+                return file.read()
 
     def text(self, path, data=None):
-        pass
+        if data is not None:
+            with open(self / path, "w") as file:
+                file.write(data)
+        else:
+            with open(self / path, "r") as file:
+                return file.read()
 
 
 def recursive_write_protect(root):
